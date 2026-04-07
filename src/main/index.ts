@@ -132,71 +132,78 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
   return true
 })
 
+// IPC: 플랫폼 정보
+ipcMain.handle('session:getPlatform', () => process.platform)
+
+// osascript 단일 구문 실행 헬퍼
+function runAppleScript(statement: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const proc = spawn('osascript', ['-e', statement], { stdio: ['ignore', 'ignore', 'pipe'] })
+    let stderr = ''
+    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
+    proc.on('close', (code) => resolve(code === 0 ? null : `터미널을 열 수 없습니다.\n${stderr.trim()}`))
+    proc.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
+  })
+}
+
+// spawn 단발 실행 헬퍼 (detached)
+function spawnDetached(prog: string, args: string[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    const child = spawn(prog, args, { detached: true, stdio: 'ignore' })
+    child.on('spawn', () => { child.unref(); resolve(null) })
+    child.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
+  })
+}
+
 // IPC: 터미널에서 세션 재개 — 성공 시 null, 실패 시 에러 메시지 반환
-ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<string | null> => {
+ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string): Promise<string | null> => {
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sessionId)) {
     return '유효하지 않은 세션 ID입니다.'
   }
 
+  const cmd = `claude --resume ${sessionId}`
+
+  // macOS
   if (process.platform === 'darwin') {
-    // "window"는 AppleScript 예약 클래스명이므로 괄호로 감싸면 파서 오류 발생.
-    // iTerm2는 create 후 current window를 참조하는 방식으로 우회.
-    const script = [
-      'tell application "System Events" to set iTermRunning to (name of processes) contains "iTerm2"',
-      'if iTermRunning then',
-      '  tell application "iTerm2"',
-      '    activate',
-      '    create window with default profile',
-      `    tell current session of current window to write text "claude --resume ${sessionId}"`,
-      '  end tell',
-      'else',
-      `  tell application "Terminal" to do script "claude --resume ${sessionId}"`,
-      '  tell application "Terminal" to activate',
-      'end if',
-    ]
-    return new Promise((resolve) => {
-      const proc = spawn('osascript', script.flatMap(l => ['-e', l]), {
-        stdio: ['ignore', 'ignore', 'pipe'],
-      })
-      let stderr = ''
-      proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
-      proc.on('close', (code) => resolve(code === 0 ? null : `터미널을 열 수 없습니다.\n${stderr.trim()}`))
-      proc.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
-    })
-  } else if (process.platform === 'win32') {
-    const cmd = `claude --resume ${sessionId}`
-    return new Promise((resolve) => {
-      const wt = spawn('wt.exe', ['new-tab', '--', 'cmd', '/k', cmd], { stdio: 'ignore' })
-      wt.on('spawn', () => { wt.unref(); resolve(null) })
-      wt.on('error', () => {
-        // wt 없으면 cmd.exe 폴백
-        const fallback = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', cmd], { stdio: 'ignore' })
-        fallback.on('spawn', () => { fallback.unref(); resolve(null) })
-        fallback.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
-      })
-    })
-  } else {
-    // Linux: 순서대로 시도, 모두 실패하면 에러 반환
-    const cmd = `claude --resume ${sessionId}`
-    const terminals: [string, string[]][] = [
-      ['gnome-terminal', ['--', 'bash', '-c', `${cmd}; exec bash`]],
-      ['konsole', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
-      ['x-terminal-emulator', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
-      ['xterm', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
-    ]
-    return new Promise((resolve) => {
-      const tryNext = (i: number) => {
-        if (i >= terminals.length) {
-          resolve('사용 가능한 터미널 에뮬레이터를 찾을 수 없습니다.\n(gnome-terminal, konsole, xterm 중 하나를 설치하세요.)')
-          return
-        }
-        const [prog, args] = terminals[i]
-        const child = spawn(prog, args, { detached: true, stdio: 'ignore' })
-        child.on('spawn', () => { child.unref(); resolve(null) })
-        child.on('error', () => tryNext(i + 1))
-      }
-      tryNext(0)
-    })
+    switch (terminal) {
+      case 'iterm2':
+        // 단일 구문으로 새 창 열기 — multi-line AppleScript의 파싱 오류 방지
+        return runAppleScript(`tell application "iTerm2" to create window with default profile command "${cmd}"`)
+      case 'warp':
+        return spawnDetached('open', ['-a', 'Warp', '--args', cmd])
+      case 'ghostty':
+        return spawnDetached('open', ['-a', 'Ghostty', '--args', cmd])
+      default: // 'terminal' (Terminal.app)
+        return runAppleScript(`tell application "Terminal" to do script "${cmd}"`)
+    }
+  }
+
+  // Windows
+  if (process.platform === 'win32') {
+    switch (terminal) {
+      case 'powershell':
+        return spawnDetached('powershell.exe', ['-NoExit', '-Command', cmd])
+      case 'cmd':
+        return new Promise((resolve) => {
+          const child = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', cmd], { stdio: 'ignore' })
+          child.on('spawn', () => { child.unref(); resolve(null) })
+          child.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
+        })
+      default: // 'wt' (Windows Terminal)
+        return spawnDetached('wt.exe', ['new-tab', '--', 'cmd', '/k', cmd])
+    }
+  }
+
+  // Linux
+  switch (terminal) {
+    case 'konsole':
+      return spawnDetached('konsole', ['-e', 'bash', '-c', `${cmd}; exec bash`])
+    case 'xterm':
+      return spawnDetached('xterm', ['-e', 'bash', '-c', `${cmd}; exec bash`])
+    case 'kitty':
+      return spawnDetached('kitty', ['bash', '-c', `${cmd}; exec bash`])
+    default: // 'gnome-terminal'
+      return spawnDetached('gnome-terminal', ['--', 'bash', '-c', `${cmd}; exec bash`])
   }
 })
 

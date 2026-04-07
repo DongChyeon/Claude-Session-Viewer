@@ -56,11 +56,52 @@ function makeHighlightPlugin(query: string) {
   return () => (tree: any) => visit(tree)
 }
 
+const MAC_TERMINALS = [
+  { value: 'terminal', label: 'Terminal.app' },
+  { value: 'iterm2',   label: 'iTerm2' },
+  { value: 'warp',     label: 'Warp' },
+  { value: 'ghostty',  label: 'Ghostty' },
+]
+const WIN_TERMINALS = [
+  { value: 'wt',          label: 'Windows Terminal' },
+  { value: 'cmd',         label: 'cmd.exe' },
+  { value: 'powershell',  label: 'PowerShell' },
+]
+const LINUX_TERMINALS = [
+  { value: 'gnome-terminal', label: 'GNOME Terminal' },
+  { value: 'konsole',        label: 'Konsole' },
+  { value: 'kitty',          label: 'Kitty' },
+  { value: 'xterm',          label: 'xterm' },
+]
+
 export function ConversationView({ messages, sessionId }: Props) {
   const [query, setQuery] = useState('')
   const [matchIndex, setMatchIndex] = useState(0)
+  const [platform, setPlatform] = useState('')
+  const [terminal, setTerminal] = useState(() => localStorage.getItem('preferredTerminal') ?? '')
   const searchInputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    window.api.getPlatform().then((p) => {
+      setPlatform(p)
+      setTerminal((prev) => {
+        if (prev) return prev
+        const def = p === 'darwin' ? 'terminal' : p === 'win32' ? 'wt' : 'gnome-terminal'
+        localStorage.setItem('preferredTerminal', def)
+        return def
+      })
+    })
+  }, [])
+
+  const terminalOptions = platform === 'darwin' ? MAC_TERMINALS
+    : platform === 'win32' ? WIN_TERMINALS
+    : LINUX_TERMINALS
+
+  const handleTerminalChange = (value: string) => {
+    setTerminal(value)
+    localStorage.setItem('preferredTerminal', value)
+  }
 
   const matchedIndices = useMemo(() => searchInSession(messages, query), [messages, query])
   const totalMatches = matchedIndices.length
@@ -145,16 +186,28 @@ export function ConversationView({ messages, sessionId }: Props) {
         {query && <button onClick={() => setQuery('')}>✕</button>}
         <button className="export-btn" onClick={handleExport} title="HTML로 내보내기">↓ HTML</button>
         {sessionId && (
-          <button
-            className="resume-btn"
-            onClick={async () => {
-              const err = await window.api.resumeSession(sessionId)
-              if (err) alert(`세션 재개 실패\n\n${err}`)
-            }}
-            title={`claude --resume ${sessionId}`}
-          >
-            ▶ 터미널에서 재개
-          </button>
+          <>
+            <select
+              className="terminal-select"
+              value={terminal}
+              onChange={(e) => handleTerminalChange(e.target.value)}
+              title="터미널 선택"
+            >
+              {terminalOptions.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <button
+              className="resume-btn"
+              onClick={async () => {
+                const err = await window.api.resumeSession(sessionId, terminal)
+                if (err) alert(`세션 재개 실패\n\n${err}`)
+              }}
+              title={`claude --resume ${sessionId}`}
+            >
+              ▶ 재개
+            </button>
+          </>
         )}
       </div>
 

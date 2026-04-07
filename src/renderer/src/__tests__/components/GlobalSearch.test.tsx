@@ -21,6 +21,7 @@ beforeEach(() => {
     globalSearch: vi.fn().mockResolvedValue(검색결과),
     exportHtml: vi.fn().mockResolvedValue(true),
     resumeSession: vi.fn().mockResolvedValue(null),
+    getPlatform: vi.fn().mockResolvedValue('darwin'),
     onSessionUpdated: vi.fn().mockReturnValue(() => {}),
   }
 })
