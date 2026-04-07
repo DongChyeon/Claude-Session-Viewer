@@ -1,51 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="8" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.45"/>
+    <filter id="docshadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="6" dy="10" stdDeviation="16" flood-color="#000" flood-opacity="0.5"/>
     </filter>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1e1726"/>
-      <stop offset="100%" stop-color="#130f1e"/>
-    </linearGradient>
     <clipPath id="roundRect">
       <rect width="1024" height="1024" rx="220"/>
     </clipPath>
   </defs>
 
   <!-- Background -->
-  <rect width="1024" height="1024" rx="220" fill="url(#bgGrad)"/>
+  <rect width="1024" height="1024" rx="220" fill="#1e1a2e"/>
 
-  <!-- Paper document (tilted, right side) -->
+  <!-- Claude Code logo (pixel art) centered, scaled up -->
+  <image href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAKACAMAAAA7EzkRAAAAFVBMVEVMaXHZd1fZd1babUjZd1faf1rZd1epRaWRAAAABnRSTlMAXawH8g5t5RLrAAAACXBIWXMAAAsTAAALEwEAmpwYAAAFOklEQVR42u3WUQ6EIAxAQcDV+x95r1Bjk2Kdid81wkMdAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADebtHa9gFedPYTIAIUoAAFiAAFKEABIkABClCACFCAAhQgAkSAAkSACFCACBABChABIkABIkAEKEAEiAAFiAARoAARIAIUIAJEgAJEgAhQgAgQAQoQASJAAQpQgAhQgAIUIAIUoAAFiAAFKEABIkABClCACBABChABIkABIkAEKEAEiAAFiAARoAARIAIUIAJEgAJEgAhQgAgQAQoQASJAASJABChABIgABShAASJAAQpQgAhQgAIUIAIUoAAFiAARoAARIAIUIAJEgAJEgAhQgAjwnjNmfq2EGVwYAT4UvO33AqzZDwEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoACTHTHfCzC4MNkBHsnGBYUEiAARIAgQAYIAESAIEAGCABEgCBABggARIAgQAYIAESAIEAGCABEgCBABggARIAgQAYIAESAIEAEiQBAgAgQBIkAQIAIEASJAECACBAEiQBAgAgQBIkAQIAIEASJAECACBAEiQBAgAgQBIkAQIAIEASJABAgCRIAgQAQIAkSAIEAECAJEgCBABAgCRIDwNMCVzJL2lt3LyGaLmr+xdmeLBChABIgABYgAEaAAESACFCACRIACRIAIUIAIEAEKEAEiQAEiQAQoQASIAAWIABGgABEgAhQgAkSAAhSgABGgAAUoQAQoQAEKEAEKUIACRIAIUIAIEAEKEAEiQAEiQAQoQASIAAWIABGgABEgAhQgAkSAAkSACFCACBABChABIkABIkAEKEABChABClCAAkSAAhSgABGgAAUoQAQoQAEKEAEiQAEiQAQoQASIAAWIABGgABEgAhQgAkSAAkSACDDJjFnRBy6aVyb6HKto3mhiJp+4W/OOXa8bX5CZ/EVqU9YbAuzwCyNAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKUIACFKAABShAAQpQgAIUoAAFKEABClCAAhSgAAUoQAEKcEvnDCqaV3cyg86ieQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwJv8Af3P8SOrUE9bAAAAAElFTkSuQmCC"
+         x="112" y="100" width="800" height="800"
+         clip-path="url(#roundRect)"
+         image-rendering="pixelated"/>
+
+  <!-- Document icon — bottom right corner -->
   <g clip-path="url(#roundRect)">
-    <g transform="translate(596, 490) rotate(14)" filter="url(#shadow)">
-      <rect x="-115" y="-160" width="230" height="300" rx="22" fill="#f5f0e8"/>
+    <g transform="translate(695, 680)" filter="url(#docshadow)">
+      <!-- Paper body -->
+      <rect x="0" y="0" width="210" height="265" rx="20" fill="#f5f0e8"/>
       <!-- Folded corner -->
-      <polygon points="115,-160 115,-110 65,-160" fill="#ddd8cc"/>
+      <polygon points="210,0 210,55 155,0" fill="#ddd8cc"/>
       <!-- Text lines -->
-      <rect x="-78" y="-108" width="150" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="-82"  width="130" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="-56"  width="142" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="-30"  width="108" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="0"    width="136" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="26"   width="118" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="52"   width="144" height="13" rx="6.5" fill="#b8b2a8"/>
-      <rect x="-78" y="78"   width="98"  height="13" rx="6.5" fill="#b8b2a8"/>
+      <rect x="28" y="52"  width="140" height="12" rx="6" fill="#b8b2a8"/>
+      <rect x="28" y="76"  width="120" height="12" rx="6" fill="#b8b2a8"/>
+      <rect x="28" y="100" width="134" height="12" rx="6" fill="#b8b2a8"/>
+      <rect x="28" y="124" width="104" height="12" rx="6" fill="#b8b2a8"/>
+      <rect x="28" y="148" width="128" height="12" rx="6" fill="#b8b2a8"/>
+      <rect x="28" y="172" width="112" height="12" rx="6" fill="#b8b2a8"/>
     </g>
-  </g>
-
-  <!-- Claude orbital arcs (concentric curved lines, left-center) -->
-  <g transform="translate(430, 512)">
-    <!-- Outermost arc -->
-    <path d="M 40,-230 A240,240 0 1,0 40,230"
-          stroke="#D4805A" stroke-width="62" fill="none"
-          stroke-linecap="round" opacity="1.0"/>
-    <!-- Middle arc -->
-    <path d="M 40,-140 A150,150 0 1,0 40,140"
-          stroke="#D4805A" stroke-width="58" fill="none"
-          stroke-linecap="round" opacity="0.72"/>
-    <!-- Inner arc -->
-    <path d="M 40,-52 A60,60 0 1,0 40,52"
-          stroke="#D4805A" stroke-width="52" fill="none"
-          stroke-linecap="round" opacity="0.44"/>
   </g>
 </svg>
