@@ -139,13 +139,15 @@ ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<string |
   }
 
   if (process.platform === 'darwin') {
+    // "window"는 AppleScript 예약 클래스명이므로 괄호로 감싸면 파서 오류 발생.
+    // iTerm2는 create 후 current window를 참조하는 방식으로 우회.
     const script = [
       'tell application "System Events" to set iTermRunning to (name of processes) contains "iTerm2"',
       'if iTermRunning then',
       '  tell application "iTerm2"',
       '    activate',
-      '    set newWin to (create window with default profile)',
-      `    tell current session of newWin to write text "claude --resume ${sessionId}"`,
+      '    create window with default profile',
+      `    tell current session of current window to write text "claude --resume ${sessionId}"`,
       '  end tell',
       'else',
       `  tell application "Terminal" to do script "claude --resume ${sessionId}"`,
