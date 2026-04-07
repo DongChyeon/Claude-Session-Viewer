@@ -2,12 +2,6 @@ const { execSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 
-/**
- * electron-builder afterPack 훅 — macOS ad-hoc 코드 서명
- *
- * codesign --deep 은 Electron Framework의 버전화된 내부 구조를 제대로 처리하지 못한다.
- * 안(dylib) → 중간(framework, helper) → 바깥(main app) 순서로 직접 서명해야 한다.
- */
 exports.default = async function afterPack(context) {
   if (process.platform !== 'darwin') return
 
@@ -15,57 +9,74 @@ exports.default = async function afterPack(context) {
   const appPath = path.join(context.appOutDir, `${appName}.app`)
   const frameworksPath = path.join(appPath, 'Contents', 'Frameworks')
 
-  console.log(`\n[after-pack] Ad-hoc signing: ${appPath}`)
+  console.log('\n========================================')
+  console.log('[after-pack] START ad-hoc signing')
+  console.log(`[after-pack] appPath: ${appPath}`)
+  console.log('========================================\n')
+
+  if (!fs.existsSync(appPath)) {
+    throw new Error(`[after-pack] .app not found: ${appPath}`)
+  }
 
   const sign = (target) => {
-    try {
-      execSync(`codesign --force --sign - --timestamp=none "${target}"`, { stdio: 'pipe' })
-    } catch (e) {
-      console.warn(`  [warn] sign failed: ${path.basename(target)}`, e.stderr?.toString().trim())
+    console.log(`  signing: ${path.relative(appPath, target)}`)
+    // 오류 발생 시 즉시 throw (silent catch 제거)
+    execSync(`codesign --force --sign - --timestamp=none "${target}"`, { stdio: 'pipe' })
+  }
+
+  const run = (cmd) => execSync(cmd, { shell: '/bin/bash', encoding: 'utf-8' })
+
+  if (fs.existsSync(frameworksPath)) {
+    // 1. 모든 .dylib
+    run(`find "${frameworksPath}" -name "*.dylib" -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
+
+    // 2. Electron Framework — Versions/A 내부 바이너리 직접 서명
+    const electronFw = path.join(frameworksPath, 'Electron Framework.framework')
+    if (fs.existsSync(electronFw)) {
+      const versA = path.join(electronFw, 'Versions', 'A')
+      // 내부 라이브러리
+      const libsDir = path.join(versA, 'Libraries')
+      if (fs.existsSync(libsDir)) {
+        run(`find "${libsDir}" -name "*.dylib" -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
+      }
+      // Versions/A 내 실행 파일들
+      const binaries = run(`find "${versA}" -maxdepth 1 -type f -perm +0111`).trim().split('\n').filter(Boolean)
+      for (const b of binaries) sign(b)
+      // Electron Framework 번들 전체 서명
+      sign(electronFw)
     }
+
+    // 3. 나머지 .framework 번들 (Electron Framework 제외)
+    const otherFws = run(`find "${frameworksPath}" -maxdepth 2 -name "*.framework" ! -path "*Electron Framework*"`)
+      .trim().split('\n').filter(Boolean)
+    for (const fw of otherFws) sign(fw)
+
+    // 4. Helper .app 번들
+    const helpers = run(`find "${frameworksPath}" -maxdepth 3 -name "*.app"`)
+      .trim().split('\n').filter(Boolean)
+    for (const h of helpers) sign(h)
   }
 
-  const sh = (cmd) => execSync(cmd, { shell: '/bin/bash', stdio: 'pipe' })
-
-  if (!fs.existsSync(frameworksPath)) {
-    sign(appPath)
-    return
-  }
-
-  // 1. 모든 dylib 서명
-  sh(`find "${frameworksPath}" -name "*.dylib" -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
-
-  // 2. Electron Framework 내부 바이너리 직접 서명 (버전화 구조 대응)
-  const electronFw = path.join(frameworksPath, 'Electron Framework.framework')
-  if (fs.existsSync(electronFw)) {
-    const versionsA = path.join(electronFw, 'Versions', 'A')
-    // 내부 실행 파일
-    const mainBin = path.join(versionsA, 'Electron Framework')
-    if (fs.existsSync(mainBin)) sign(mainBin)
-    // Versions/A/Libraries 안의 dylib
-    const libsPath = path.join(versionsA, 'Libraries')
-    if (fs.existsSync(libsPath)) {
-      sh(`find "${libsPath}" -name "*.dylib" -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
-    }
-    // Electron Framework 번들 전체
-    sign(electronFw)
-  }
-
-  // 3. 나머지 .framework 번들
-  const otherFws = sh(`find "${frameworksPath}" -maxdepth 2 -name "*.framework" ! -path "*Electron Framework*"`)
-    .toString().trim().split('\n').filter(Boolean)
-  for (const fw of otherFws) sign(fw)
-
-  // 4. Helper .app 번들 (안에서 밖으로)
-  const helpers = sh(`find "${frameworksPath}" -maxdepth 3 -name "*.app"`)
-    .toString().trim().split('\n').filter(Boolean)
-  for (const helper of helpers.sort((a, b) => b.length - a.length)) sign(helper)
-
-  // 5. 실행 파일
-  sh(`find "${appPath}/Contents/MacOS" -type f -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
+  // 5. 메인 실행 파일
+  run(`find "${appPath}/Contents/MacOS" -type f -print0 | xargs -0 -I{} codesign --force --sign - --timestamp=none "{}"`)
 
   // 6. 메인 앱 번들
   sign(appPath)
 
-  console.log('[after-pack] Ad-hoc signing complete.\n')
+  // 7. 서명 결과 검증
+  console.log('\n[after-pack] Verifying signatures...')
+  const fwBin = path.join(appPath, 'Contents', 'Frameworks',
+    'Electron Framework.framework', 'Versions', 'A', 'Electron Framework')
+  if (fs.existsSync(fwBin)) {
+    const info = execSync(`codesign -dv "${fwBin}" 2>&1 || true`, { shell: '/bin/bash', encoding: 'utf-8' })
+    const teamLine = info.split('\n').find(l => l.includes('TeamIdentifier') || l.includes('Identifier'))
+    console.log(`  Electron Framework: ${teamLine?.trim() ?? '(no team line found)'}`)
+  }
+  const appInfo = execSync(`codesign -dv "${appPath}" 2>&1 || true`, { shell: '/bin/bash', encoding: 'utf-8' })
+  const appTeam = appInfo.split('\n').find(l => l.includes('TeamIdentifier') || l.includes('Identifier'))
+  console.log(`  Main app:           ${appTeam?.trim() ?? '(no team line found)'}`)
+
+  console.log('\n========================================')
+  console.log('[after-pack] Ad-hoc signing COMPLETE')
+  console.log('========================================\n')
 }
