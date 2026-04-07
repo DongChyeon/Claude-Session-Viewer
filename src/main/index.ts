@@ -170,9 +170,11 @@ ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string)
         // 단일 구문으로 새 창 열기 — multi-line AppleScript의 파싱 오류 방지
         return runAppleScript(`tell application "iTerm2" to create window with default profile command "${cmd}"`)
       case 'warp':
-        return spawnDetached('open', ['-a', 'Warp', '--args', cmd])
+        // Warp는 CLI 인자로 명령 실행 미지원 — URL scheme 사용
+        return spawnDetached('open', [`warp://action/new_tab?command=${encodeURIComponent(cmd)}`])
       case 'ghostty':
-        return spawnDetached('open', ['-a', 'Ghostty', '--args', cmd])
+        // Ghostty는 -e 플래그로 실행할 명령 지정
+        return spawnDetached('open', ['-na', 'Ghostty', '--args', '-e', cmd])
       default: // 'terminal' (Terminal.app)
         return runAppleScript(`tell application "Terminal" to do script "${cmd}"`)
     }
