@@ -15,7 +15,8 @@ exports.default = async function afterPack(context) {
   console.log('========================================\n')
 
   if (!fs.existsSync(appPath)) {
-    throw new Error(`[after-pack] .app not found: ${appPath}`)
+    console.log(`[after-pack] .app not found, skipping: ${appPath}`)
+    return
   }
 
   const sign = (target) => {
