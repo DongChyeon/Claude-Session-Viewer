@@ -1,6 +1,43 @@
-node_modules
-dist
-out
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.log.*
+logs/
+
+# Cache
 .eslintcache
-*.log*
+.vite/
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# electron-builder
+dist_electron/
+
+# Test coverage
+coverage/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Superpowers / Claude
+.superpowers/
+.claude/
