@@ -1,0 +1,100 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --text-primary: #f0f6fc;
+  --text-secondary: #c9d1d9;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --success: #3fb950;
+  --user-bg: #21262d;
+  --assistant-bg: #1a2e1a;
+}
+
+body { background: var(--bg-primary); color: var(--text-primary); font-family: -apple-system, sans-serif; }
+
+.app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+/* 상단 검색 바 */
+.top-bar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border); cursor: pointer; flex-shrink: 0;
+}
+.top-bar:hover { background: var(--bg-tertiary); }
+.search-placeholder { flex: 1; font-size: 13px; color: var(--text-muted); }
+.stats { font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); padding: 2px 8px; border-radius: 4px; }
+
+/* 3-패널 */
+.panels { display: flex; flex: 1; overflow: hidden; }
+
+.panel { display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { padding: 8px 14px; font-size: 10px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; flex-shrink: 0; }
+
+/* ProjectList */
+.project-list { width: 220px; border-right: 1px solid var(--border); background: var(--bg-primary); overflow-y: auto; flex-shrink: 0; }
+.project-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-left: 3px solid transparent; }
+.project-item:hover { background: var(--bg-secondary); }
+.project-item.selected { background: var(--bg-tertiary); color: var(--text-primary); border-left-color: var(--accent); }
+.session-count { font-size: 11px; color: var(--text-muted); background: var(--bg-tertiary); padding: 1px 6px; border-radius: 10px; }
+
+/* SessionList */
+.session-list { width: 280px; border-right: 1px solid var(--border); background: var(--bg-primary); overflow-y: auto; flex-shrink: 0; }
+.session-item { padding: 12px 14px; cursor: pointer; border-bottom: 1px solid var(--bg-secondary); border-left: 3px solid transparent; }
+.session-item:hover { background: var(--bg-secondary); }
+.session-item.selected { background: var(--bg-tertiary); border-left-color: var(--accent); }
+.session-date { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+.session-preview { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
+.session-count { font-size: 10px; color: var(--success); }
+.empty-state { padding: 20px; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+/* ConversationView */
+.conversation-view { flex: 1; min-width: 0; }
+.conversation-view.empty { align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; }
+
+/* 세션 내 검색 */
+.in-session-search {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.in-session-search input { flex: 1; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 4px; padding: 4px 10px; color: var(--text-primary); font-size: 12px; outline: none; }
+.in-session-search input:focus { border-color: var(--accent); }
+.match-count { font-size: 11px; color: var(--accent); white-space: nowrap; }
+.in-session-search button { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--text-muted); cursor: pointer; padding: 2px 6px; font-size: 12px; }
+.in-session-search button:disabled { opacity: 0.3; cursor: default; }
+
+/* 메시지 */
+.messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.message { display: flex; gap: 10px; align-items: flex-start; }
+.message-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+.message-user .message-avatar { background: var(--user-bg); }
+.message-assistant .message-avatar { background: var(--assistant-bg); }
+.message-content { background: var(--user-bg); border-radius: 8px; padding: 10px 14px; font-size: 13px; line-height: 1.6; max-width: 85%; }
+.message-assistant .message-content { background: var(--assistant-bg); }
+.message-content pre { background: var(--bg-primary); border-radius: 6px; padding: 10px; overflow-x: auto; margin-top: 8px; }
+.message-content code { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.search-highlight { background: #f0e68c; color: #000; border-radius: 2px; padding: 0 1px; }
+.search-focused .message-content { outline: 2px solid var(--accent); }
+
+/* GlobalSearch */
+.global-search-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-start; justify-content: center; padding-top: 10vh; z-index: 1000; }
+.global-search-modal { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 10px; width: 600px; max-height: 70vh; overflow: hidden; display: flex; flex-direction: column; }
+.global-search-modal input { padding: 14px 16px; font-size: 15px; background: none; border: none; border-bottom: 1px solid var(--border); color: var(--text-primary); outline: none; }
+.search-results { overflow-y: auto; }
+.search-result-item { padding: 10px 16px; cursor: pointer; border-bottom: 1px solid var(--bg-tertiary); }
+.search-result-item:hover { background: var(--bg-tertiary); }
+.result-meta { display: flex; gap: 10px; margin-bottom: 4px; }
+.result-project { font-size: 11px; font-weight: bold; color: var(--accent); }
+.result-date { font-size: 11px; color: var(--text-muted); }
+.result-snippet { font-size: 12px; color: var(--text-secondary); }
+.no-results { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+/* 하단 상태바 */
+.status-bar { display: flex; gap: 20px; align-items: center; padding: 4px 16px; background: var(--bg-secondary); border-top: 1px solid var(--border); font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.watcher-status.active { color: var(--success); }
+.watcher-status.inactive { color: #f85149; }
+.projects-dir { margin-left: auto; }
