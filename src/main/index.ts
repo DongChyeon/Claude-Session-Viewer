@@ -174,16 +174,6 @@ ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string)
           `  create window with default profile command "${cmd}"`,
           'end tell',
         ])
-      case 'iterm':
-        // iTerm v1 API: make new terminal + exec command
-        return runAppleScript([
-          'tell application "iTerm"',
-          '  set myterm to (make new terminal)',
-          '  tell myterm',
-          `    exec command "${cmd}"`,
-          '  end tell',
-          'end tell',
-        ])
       case 'warp':
         // Warp는 CLI 인자로 명령 실행 미지원 — URL scheme 사용
         return spawnDetached('open', [`warp://action/new_tab?command=${encodeURIComponent(cmd)}`])
