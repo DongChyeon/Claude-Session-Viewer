@@ -59,6 +59,7 @@ function makeHighlightPlugin(query: string) {
 const MAC_TERMINALS = [
   { value: 'terminal', label: 'Terminal.app' },
   { value: 'iterm2',   label: 'iTerm2' },
+  { value: 'iterm',    label: 'iTerm (v1)' },
   { value: 'warp',     label: 'Warp' },
   { value: 'ghostty',  label: 'Ghostty' },
 ]

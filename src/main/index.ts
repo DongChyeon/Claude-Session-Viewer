@@ -135,10 +135,11 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
 // IPC: 플랫폼 정보
 ipcMain.handle('session:getPlatform', () => process.platform)
 
-// osascript 단일 구문 실행 헬퍼
-function runAppleScript(statement: string): Promise<string | null> {
+// osascript 실행 헬퍼 (단일 구문 또는 구문 배열)
+function runAppleScript(lines: string | string[]): Promise<string | null> {
+  const args = (Array.isArray(lines) ? lines : [lines]).flatMap(l => ['-e', l])
   return new Promise((resolve) => {
-    const proc = spawn('osascript', ['-e', statement], { stdio: ['ignore', 'ignore', 'pipe'] })
+    const proc = spawn('osascript', args, { stdio: ['ignore', 'ignore', 'pipe'] })
     let stderr = ''
     proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
     proc.on('close', (code) => resolve(code === 0 ? null : `터미널을 열 수 없습니다.\n${stderr.trim()}`))
@@ -167,8 +168,22 @@ ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string)
   if (process.platform === 'darwin') {
     switch (terminal) {
       case 'iterm2':
-        // 단일 구문으로 새 창 열기 — multi-line AppleScript의 파싱 오류 방지
-        return runAppleScript(`tell application "iTerm2" to create window with default profile command "${cmd}"`)
+        // tell...end tell 블록: 딕셔너리 컨텍스트 안에서 'window' 클래스명 파싱 오류 방지
+        return runAppleScript([
+          'tell application "iTerm2"',
+          `  create window with default profile command "${cmd}"`,
+          'end tell',
+        ])
+      case 'iterm':
+        // iTerm v1 API: make new terminal + exec command
+        return runAppleScript([
+          'tell application "iTerm"',
+          '  set myterm to (make new terminal)',
+          '  tell myterm',
+          `    exec command "${cmd}"`,
+          '  end tell',
+          'end tell',
+        ])
       case 'warp':
         // Warp는 CLI 인자로 명령 실행 미지원 — URL scheme 사용
         return spawnDetached('open', [`warp://action/new_tab?command=${encodeURIComponent(cmd)}`])
