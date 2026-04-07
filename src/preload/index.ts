@@ -1,22 +1,15 @@
-import { contextBridge } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
+import { contextBridge, ipcRenderer } from 'electron'
+import type { ElectronAPI } from '../renderer/src/types'
 
-// Custom APIs for renderer
-const api = {}
-
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI
-  // @ts-ignore (define in dts)
-  window.api = api
+const api: ElectronAPI = {
+  getProjects: () => ipcRenderer.invoke('session:getProjects'),
+  getSessions: (projectId) => ipcRenderer.invoke('session:getSessions', projectId),
+  getMessages: (projectId, sessionId) => ipcRenderer.invoke('session:getMessages', projectId, sessionId),
+  globalSearch: (query) => ipcRenderer.invoke('session:globalSearch', query),
+  onSessionUpdated: (callback) => {
+    ipcRenderer.on('session:updated', callback)
+    return () => ipcRenderer.removeListener('session:updated', callback)
+  },
 }
+
+contextBridge.exposeInMainWorld('api', api)
