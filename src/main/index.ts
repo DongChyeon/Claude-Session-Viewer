@@ -173,8 +173,8 @@ ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string)
         // Warp는 CLI 인자로 명령 실행 미지원 — URL scheme 사용
         return spawnDetached('open', [`warp://action/new_tab?command=${encodeURIComponent(cmd)}`])
       case 'ghostty':
-        // Ghostty는 -e 플래그로 실행할 명령 지정
-        return spawnDetached('open', ['-na', 'Ghostty', '--args', '-e', cmd])
+        // Ghostty는 -e 뒤에 쉘을 통해 명령 실행 (-e cmd 만으로는 login이 단일 인자로 처리)
+        return spawnDetached('open', ['-na', 'Ghostty', '--args', '-e', '/bin/bash', '-c', cmd])
       default: // 'terminal' (Terminal.app)
         return runAppleScript(`tell application "Terminal" to do script "${cmd}"`)
     }
