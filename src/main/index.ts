@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { readdir, readFile, writeFile } from 'fs/promises'
+import { readdir, readFile, writeFile, chmod } from 'fs/promises'
 import { spawn } from 'child_process'
 import { startWatcher } from './watcher'
 import type { Project, Session, Message, GlobalSearchResult } from '../renderer/src/types'
@@ -177,9 +177,23 @@ ipcMain.handle('session:resume', async (_e, sessionId: string, terminal: string)
       case 'warp':
         // Warp는 CLI 인자로 명령 실행 미지원 — URL scheme 사용
         return spawnDetached('open', [`warp://action/new_tab?command=${encodeURIComponent(cmd)}`])
-      case 'ghostty':
-        // Ghostty는 -e 뒤에 쉘을 통해 명령 실행 (-e cmd 만으로는 login이 단일 인자로 처리)
-        return spawnDetached('open', ['-na', 'Ghostty', '--args', '-e', '/bin/bash', '-c', cmd])
+      case 'ghostty': {
+        // open --args 는 args를 별개 토큰으로 전달하므로
+        // bash -c "claude --resume uuid" 의 cmd 부분이 분리되어 claude 만 실행됨.
+        // 또한 open -na 로 열린 쉘은 로그인 쉘이 아니라 PATH 미설정.
+        // → 임시 스크립트 파일에 명령과 profile 소스를 기록해 단일 경로로 전달.
+        const tmpScript = join(app.getPath('temp'), `claude-resume-${sessionId}.sh`)
+        await writeFile(tmpScript, [
+          '#!/bin/bash',
+          '[ -f ~/.zprofile ]     && source ~/.zprofile',
+          '[ -f ~/.bash_profile ] && source ~/.bash_profile',
+          '[ -f ~/.profile ]      && source ~/.profile',
+          cmd,
+          'exec $SHELL',
+        ].join('\n'))
+        await chmod(tmpScript, 0o755)
+        return spawnDetached('open', ['-na', 'Ghostty', '--args', '-e', tmpScript])
+      }
       default: // 'terminal' (Terminal.app)
         return runAppleScript(`tell application "Terminal" to do script "${cmd}"`)
     }
