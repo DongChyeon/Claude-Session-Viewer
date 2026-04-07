@@ -1,5 +1,5 @@
 // src/renderer/src/hooks/useSessions.ts
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Project, Session, Message } from '../types'
 
 export function useSessions() {
@@ -10,6 +10,8 @@ export function useSessions() {
   const [messages, setMessages] = useState<Message[]>([])
   const [watcherActive, setWatcherActive] = useState(true)
 
+  const selectedProjectIdRef = useRef<string | null>(null)
+
   const loadProjects = useCallback(async () => {
     try {
       const data = await window.api.getProjects()
@@ -19,19 +21,25 @@ export function useSessions() {
     }
   }, [])
 
+  // 초기 로드
   useEffect(() => {
     loadProjects()
+  }, [loadProjects])
+
+  // 파일 변경 감시 구독 (한 번만)
+  useEffect(() => {
     const unsubscribe = window.api.onSessionUpdated(() => {
       loadProjects()
-      if (selectedProjectId) {
-        window.api.getSessions(selectedProjectId).then(setSessions).catch(() => {})
+      if (selectedProjectIdRef.current) {
+        window.api.getSessions(selectedProjectIdRef.current).then(setSessions).catch(() => {})
       }
     })
     return unsubscribe
-  }, [loadProjects, selectedProjectId])
+  }, [loadProjects])
 
   const selectProject = useCallback(async (projectId: string) => {
     setSelectedProjectId(projectId)
+    selectedProjectIdRef.current = projectId
     setSelectedSessionId(null)
     setMessages([])
     const data = await window.api.getSessions(projectId)
@@ -39,11 +47,11 @@ export function useSessions() {
   }, [])
 
   const selectSession = useCallback(async (sessionId: string) => {
-    if (!selectedProjectId) return
+    if (!selectedProjectIdRef.current) return
     setSelectedSessionId(sessionId)
-    const data = await window.api.getMessages(selectedProjectId, sessionId)
+    const data = await window.api.getMessages(selectedProjectIdRef.current, sessionId)
     setMessages(data)
-  }, [selectedProjectId])
+  }, [])
 
   const totalSessions = projects.reduce((sum, p) => sum + p.sessionCount, 0)
 
