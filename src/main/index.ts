@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { readdir, readFile, writeFile } from 'fs/promises'
@@ -124,8 +124,10 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
   if (canceled || !filePath) return false
   try {
     await writeFile(filePath, html, 'utf-8')
-    return true
   } catch { return false }
+  const openError = await shell.openPath(filePath)
+  if (openError) console.error('shell.openPath failed:', openError)
+  return true
 })
 
 // IPC: 전체 검색
