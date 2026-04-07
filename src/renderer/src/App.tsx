@@ -101,7 +101,7 @@ export function App() {
           width={session.width}
         />
         <div className="resize-handle" onMouseDown={session.onMouseDown} />
-        <ConversationView messages={messages} />
+        <ConversationView messages={messages} sessionId={selectedSessionId ?? undefined} />
       </div>
 
       {/* 하단 상태바 */}

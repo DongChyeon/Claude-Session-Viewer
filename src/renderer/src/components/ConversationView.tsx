@@ -9,6 +9,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 
 interface Props {
   messages: Message[]
+  sessionId?: string
 }
 
 // rehype 플러그인: 마크다운 렌더링 후 HTML AST에서 검색어 하이라이트
@@ -55,7 +56,7 @@ function makeHighlightPlugin(query: string) {
   return () => (tree: any) => visit(tree)
 }
 
-export function ConversationView({ messages }: Props) {
+export function ConversationView({ messages, sessionId }: Props) {
   const [query, setQuery] = useState('')
   const [matchIndex, setMatchIndex] = useState(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -143,6 +144,15 @@ export function ConversationView({ messages }: Props) {
         <button onClick={goNext} disabled={totalMatches === 0}>↓</button>
         {query && <button onClick={() => setQuery('')}>✕</button>}
         <button className="export-btn" onClick={handleExport} title="HTML로 내보내기">↓ HTML</button>
+        {sessionId && (
+          <button
+            className="resume-btn"
+            onClick={() => window.api.resumeSession(sessionId)}
+            title={`claude --resume ${sessionId}`}
+          >
+            ▶ 터미널에서 재개
+          </button>
+        )}
       </div>
 
       {/* 메시지 목록 */}

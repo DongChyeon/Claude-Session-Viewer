@@ -7,6 +7,7 @@ const api: ElectronAPI = {
   getMessages: (projectId, sessionId) => ipcRenderer.invoke('session:getMessages', projectId, sessionId),
   globalSearch: (query) => ipcRenderer.invoke('session:globalSearch', query),
   exportHtml: (html, defaultName) => ipcRenderer.invoke('session:exportHtml', html, defaultName),
+  resumeSession: (sessionId) => ipcRenderer.invoke('session:resume', sessionId),
   onSessionUpdated: (callback) => {
     ipcRenderer.on('session:updated', callback)
     return () => ipcRenderer.removeListener('session:updated', callback)

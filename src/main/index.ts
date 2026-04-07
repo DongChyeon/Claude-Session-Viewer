@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { readdir, readFile, writeFile } from 'fs/promises'
+import { exec } from 'child_process'
 import { startWatcher } from './watcher'
 import type { Project, Session, Message, GlobalSearchResult } from '../renderer/src/types'
 
@@ -129,6 +130,23 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
   const openError = await shell.openPath(filePath)
   if (openError) console.error('shell.openPath failed:', openError)
   return true
+})
+
+// IPC: 터미널에서 세션 재개
+ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<void> => {
+  // UUID 형식 검증 (보안)
+  if (!/^[0-9a-f-]{36}$/.test(sessionId)) return
+
+  const cmd = `claude --resume ${sessionId}`
+
+  if (process.platform === 'darwin') {
+    exec(`osascript -e 'tell application "Terminal" to do script "${cmd}"' -e 'tell application "Terminal" to activate'`)
+  } else if (process.platform === 'win32') {
+    exec(`start cmd /k "${cmd}"`)
+  } else {
+    // Linux: 일반적인 터미널 에뮬레이터 시도
+    exec(`x-terminal-emulator -e bash -c "${cmd}; exec bash" || gnome-terminal -- bash -c "${cmd}; exec bash" || xterm -e bash -c "${cmd}; exec bash"`)
+  }
 })
 
 // IPC: 전체 검색

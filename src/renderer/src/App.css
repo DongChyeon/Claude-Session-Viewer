@@ -76,6 +76,8 @@ body { background: var(--bg-primary); color: var(--text-primary); font-family: -
 .in-session-search button:disabled { opacity: 0.3; cursor: default; }
 .export-btn { margin-left: 4px; color: var(--accent) !important; border-color: var(--accent) !important; }
 .export-btn:hover { background: rgba(88,166,255,0.1) !important; }
+.resume-btn { margin-left: 4px; background: var(--accent); color: #fff; border: none; border-radius: 5px; padding: 3px 10px; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.resume-btn:hover { opacity: 0.85; }
 
 /* 메시지 */
 .messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 32px; }
