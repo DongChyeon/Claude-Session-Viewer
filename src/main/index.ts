@@ -70,14 +70,14 @@ ipcMain.handle('session:getProjects', async (): Promise<Project[]> => {
     for (const entry of entries) {
       if (!entry.isDirectory()) continue
       const dirName = entry.name
-      // 디렉토리명은 "/" → "-" 인코딩. 앞의 "-" 제거 후 "/" 복원, 마지막 세그먼트를 이름으로
+      // 디렉토리명은 "/" → "-" 인코딩. 앞의 "-" 제거 후 "/" 복원
       const decoded = '/' + dirName.replace(/^-/, '').replace(/-/g, '/')
-      const name = decoded.split('/').filter(Boolean).pop() ?? dirName
+      const name = decoded
       const sessionFiles = (await readdir(join(PROJECTS_DIR, dirName))).filter(f => f.endsWith('.jsonl'))
       if (sessionFiles.length === 0) continue
       projects.push({ id: dirName, name, path: decoded, sessionCount: sessionFiles.length })
     }
-    return projects.sort((a, b) => a.name.localeCompare(b.name))
+    return projects.sort((a, b) => a.path.localeCompare(b.path))
   } catch { return [] }
 })
 
@@ -126,7 +126,7 @@ ipcMain.handle('session:globalSearch', async (_e, query: string): Promise<Global
       const dir = join(PROJECTS_DIR, pd.name)
       const files = (await readdir(dir)).filter(f => f.endsWith('.jsonl'))
       const decoded = '/' + pd.name.replace(/^-/, '').replace(/-/g, '/')
-      const name = decoded.split('/').filter(Boolean).pop() ?? pd.name
+      const name = decoded
       for (const file of files) {
         try {
           const raw = await readFile(join(dir, file), 'utf-8')

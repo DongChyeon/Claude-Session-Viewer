@@ -27,7 +27,8 @@
     "@electron-toolkit/utils": "^4.0.0",
     "@tanstack/react-virtual": "^3.13.23",
     "highlight.js": "^11.11.1",
-    "react-markdown": "^10.1.0"
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",

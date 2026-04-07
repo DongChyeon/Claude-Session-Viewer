@@ -4,6 +4,7 @@ interface Props {
   sessions: Session[]
   selectedId: string | null
   onSelect: (id: string) => void
+  width?: number
 }
 
 function formatDate(iso: string): string {
@@ -14,9 +15,9 @@ function formatDate(iso: string): string {
   })
 }
 
-export function SessionList({ sessions, selectedId, onSelect }: Props) {
+export function SessionList({ sessions, selectedId, onSelect, width }: Props) {
   return (
-    <div className="panel session-list">
+    <div className="panel session-list" style={width !== undefined ? { width } : undefined}>
       <div className="panel-header">SESSIONS · {sessions.length}</div>
       {sessions.length === 0 && (
         <div className="empty-state">세션이 없습니다</div>

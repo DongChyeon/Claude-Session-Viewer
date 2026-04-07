@@ -101,6 +101,7 @@ export function ConversationView({ messages }: Props) {
                   position: 'absolute',
                   top: virtualItem.start,
                   width: '100%',
+                  paddingBottom: '24px',
                 }}
                 className={`message message-${msg.role} ${isFocused ? 'search-focused' : ''}`}
                 ref={virtualizer.measureElement}
