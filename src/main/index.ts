@@ -1,7 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
-import { readdir, readFile } from 'fs/promises'
+import { readdir, readFile, writeFile } from 'fs/promises'
 import { startWatcher } from './watcher'
 import type { Project, Session, Message, GlobalSearchResult } from '../renderer/src/types'
 
@@ -112,6 +112,20 @@ ipcMain.handle('session:getMessages', async (_e, projectId: string, sessionId: s
     const raw = await readFile(join(PROJECTS_DIR, projectId, `${sessionId}.jsonl`), 'utf-8')
     return parseJsonl(raw)
   } catch { return [] }
+})
+
+// IPC: HTML 내보내기
+ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: string): Promise<boolean> => {
+  const win = BrowserWindow.getFocusedWindow() ?? mainWindow ?? undefined
+  const { canceled, filePath } = await dialog.showSaveDialog(win!, {
+    defaultPath: defaultName,
+    filters: [{ name: 'HTML', extensions: ['html'] }],
+  })
+  if (canceled || !filePath) return false
+  try {
+    await writeFile(filePath, html, 'utf-8')
+    return true
+  } catch { return false }
 })
 
 // IPC: 전체 검색

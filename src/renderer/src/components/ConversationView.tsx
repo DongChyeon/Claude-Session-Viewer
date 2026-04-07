@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Message } from '../types'
 import { searchInSession } from '../lib/search'
+import { generateHtml } from '../lib/exportHtml'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
@@ -51,6 +52,18 @@ export function ConversationView({ messages }: Props) {
   const goNext = () => setMatchIndex((i) => (i + 1) % totalMatches)
   const goPrev = () => setMatchIndex((i) => (i - 1 + totalMatches) % totalMatches)
 
+  const handleExport = async () => {
+    try {
+      const startedAt = messages[0]?.timestamp ?? new Date().toISOString()
+      const html = generateHtml(messages, startedAt)
+      const date = new Date(startedAt).toISOString().slice(0, 10)
+      const saved = await window.api.exportHtml(html, `claude-session-${date}.html`)
+      if (saved === false) return
+    } catch {
+      alert('HTML 내보내기에 실패했습니다.')
+    }
+  }
+
   const virtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => listRef.current,
@@ -84,6 +97,7 @@ export function ConversationView({ messages }: Props) {
         <button onClick={goPrev} disabled={totalMatches === 0}>↑</button>
         <button onClick={goNext} disabled={totalMatches === 0}>↓</button>
         {query && <button onClick={() => setQuery('')}>✕</button>}
+        <button className="export-btn" onClick={handleExport} title="HTML로 내보내기">↓ HTML</button>
       </div>
 
       {/* 메시지 목록 */}

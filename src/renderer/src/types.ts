@@ -39,6 +39,7 @@ export interface ElectronAPI {
   getSessions: (projectId: string) => Promise<Session[]>
   getMessages: (projectId: string, sessionId: string) => Promise<Message[]>
   globalSearch: (query: string) => Promise<GlobalSearchResult[]>
+  exportHtml: (html: string, defaultName: string) => Promise<boolean>
   onSessionUpdated: (callback: () => void) => () => void
 }
 
