@@ -1,5 +1,7 @@
 # Claude Session Viewer
 
+https://github.com/user-attachments/assets/121ce660-bc2e-4dc1-872a-6f67e0980f88
+
 Claude Code의 대화 세션을 탐색하고, 검색하고, 터미널에서 재개할 수 있는 데스크톱 앱입니다.
 
 ---
