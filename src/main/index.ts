@@ -132,16 +132,13 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
   return true
 })
 
-// IPC: 터미널에서 세션 재개
-// sessionId를 직접 받아 함수 내에서 cmd 조합 → 외부에서 임의 명령 주입 불가
-// UUID는 [0-9a-f-] 만 포함하므로 AppleScript/bash 컨텍스트에서 안전
-ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<void> => {
-  // RFC 4122 UUID 형식 검증
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sessionId)) return
+// IPC: 터미널에서 세션 재개 — 성공 시 null, 실패 시 에러 메시지 반환
+ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<string | null> => {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sessionId)) {
+    return '유효하지 않은 세션 ID입니다.'
+  }
 
   if (process.platform === 'darwin') {
-    // iTerm2가 실행 중이면 새 창 (명시적 세션 참조로 race condition 방지),
-    // 없으면 Terminal.app
     const script = [
       'tell application "System Events" to set iTermRunning to (name of processes) contains "iTerm2"',
       'if iTermRunning then',
@@ -155,17 +152,29 @@ ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<void> =>
       '  tell application "Terminal" to activate',
       'end if',
     ]
-    spawn('osascript', script.flatMap(l => ['-e', l]), { detached: true, stdio: 'ignore' }).unref()
-  } else if (process.platform === 'win32') {
-    // Windows Terminal(wt) 우선 시도, 없으면 cmd.exe
-    const cmd = `claude --resume ${sessionId}`
-    const wt = spawn('wt.exe', ['new-tab', '--', 'cmd', '/k', cmd], { detached: true, stdio: 'ignore' })
-    wt.on('error', () => {
-      spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', cmd], { detached: true, stdio: 'ignore' }).unref()
+    return new Promise((resolve) => {
+      const proc = spawn('osascript', script.flatMap(l => ['-e', l]), {
+        stdio: ['ignore', 'ignore', 'pipe'],
+      })
+      let stderr = ''
+      proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString() })
+      proc.on('close', (code) => resolve(code === 0 ? null : `터미널을 열 수 없습니다.\n${stderr.trim()}`))
+      proc.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
     })
-    wt.unref()
+  } else if (process.platform === 'win32') {
+    const cmd = `claude --resume ${sessionId}`
+    return new Promise((resolve) => {
+      const wt = spawn('wt.exe', ['new-tab', '--', 'cmd', '/k', cmd], { stdio: 'ignore' })
+      wt.on('spawn', () => { wt.unref(); resolve(null) })
+      wt.on('error', () => {
+        // wt 없으면 cmd.exe 폴백
+        const fallback = spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', cmd], { stdio: 'ignore' })
+        fallback.on('spawn', () => { fallback.unref(); resolve(null) })
+        fallback.on('error', (err: Error) => resolve(`터미널을 열 수 없습니다.\n${err.message}`))
+      })
+    })
   } else {
-    // Linux: 여러 터미널 에뮬레이터를 순서대로 시도
+    // Linux: 순서대로 시도, 모두 실패하면 에러 반환
     const cmd = `claude --resume ${sessionId}`
     const terminals: [string, string[]][] = [
       ['gnome-terminal', ['--', 'bash', '-c', `${cmd}; exec bash`]],
@@ -173,14 +182,19 @@ ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<void> =>
       ['x-terminal-emulator', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
       ['xterm', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
     ]
-    const tryNext = (i: number) => {
-      if (i >= terminals.length) return
-      const [prog, args] = terminals[i]
-      spawn(prog, args, { detached: true, stdio: 'ignore' })
-        .on('error', () => tryNext(i + 1))
-        .unref()
-    }
-    tryNext(0)
+    return new Promise((resolve) => {
+      const tryNext = (i: number) => {
+        if (i >= terminals.length) {
+          resolve('사용 가능한 터미널 에뮬레이터를 찾을 수 없습니다.\n(gnome-terminal, konsole, xterm 중 하나를 설치하세요.)')
+          return
+        }
+        const [prog, args] = terminals[i]
+        const child = spawn(prog, args, { detached: true, stdio: 'ignore' })
+        child.on('spawn', () => { child.unref(); resolve(null) })
+        child.on('error', () => tryNext(i + 1))
+      }
+      tryNext(0)
+    })
   }
 })
 

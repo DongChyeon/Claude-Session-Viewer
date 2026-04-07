@@ -147,7 +147,10 @@ export function ConversationView({ messages, sessionId }: Props) {
         {sessionId && (
           <button
             className="resume-btn"
-            onClick={() => window.api.resumeSession(sessionId)}
+            onClick={async () => {
+              const err = await window.api.resumeSession(sessionId)
+              if (err) alert(`세션 재개 실패\n\n${err}`)
+            }}
             title={`claude --resume ${sessionId}`}
           >
             ▶ 터미널에서 재개
