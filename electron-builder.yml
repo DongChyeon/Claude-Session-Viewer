@@ -1,5 +1,6 @@
 appId: com.claudesessionviewer.app
 productName: Claude Session Viewer
+afterPack: scripts/after-pack.js
 directories:
   buildResources: build
 files:
