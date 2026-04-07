@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import type { Message } from '../types'
 import { searchInSession } from '../lib/search'
+import ReactMarkdown from 'react-markdown'
+import rehypeHighlight from 'rehype-highlight'
+import 'highlight.js/styles/github-dark.css'
+import { useVirtualizer } from '@tanstack/react-virtual'
 
 interface Props {
   messages: Message[]
@@ -25,6 +29,7 @@ export function ConversationView({ messages }: Props) {
   const [query, setQuery] = useState('')
   const [matchIndex, setMatchIndex] = useState(0)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const matchedIndices = searchInSession(messages, query)
   const totalMatches = matchedIndices.length
@@ -45,6 +50,13 @@ export function ConversationView({ messages }: Props) {
 
   const goNext = () => setMatchIndex((i) => (i + 1) % totalMatches)
   const goPrev = () => setMatchIndex((i) => (i - 1 + totalMatches) % totalMatches)
+
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 120,
+    overscan: 20,
+  })
 
   if (messages.length === 0) {
     return <div className="panel conversation-view empty"><span>세션을 선택하세요</span></div>
@@ -75,23 +87,36 @@ export function ConversationView({ messages }: Props) {
       </div>
 
       {/* 메시지 목록 */}
-      <div className="messages">
-        {messages.map((msg, idx) => {
-          const isFocused = matchedIndices[matchIndex] === idx
-          const hasMatch = query && msg.content.toLowerCase().includes(query.toLowerCase())
-          return (
-            <div
-              key={msg.uuid}
-              id={`msg-${msg.uuid}`}
-              className={`message message-${msg.role} ${isFocused ? 'search-focused' : ''}`}
-            >
-              <div className="message-avatar">{msg.role === 'user' ? '👤' : '🤖'}</div>
-              <div className="message-content">
-                {hasMatch ? highlightText(msg.content, query) : msg.content}
+      <div className="messages" ref={listRef}>
+        <div style={{ height: virtualizer.getTotalSize(), position: 'relative', width: '100%' }}>
+          {virtualizer.getVirtualItems().map((virtualItem) => {
+            const msg = messages[virtualItem.index]
+            const isFocused = matchedIndices[matchIndex] === virtualItem.index
+            const hasMatch = query && msg.content.toLowerCase().includes(query.toLowerCase())
+            return (
+              <div
+                key={msg.uuid}
+                id={`msg-${msg.uuid}`}
+                style={{
+                  position: 'absolute',
+                  top: virtualItem.start,
+                  width: '100%',
+                }}
+                className={`message message-${msg.role} ${isFocused ? 'search-focused' : ''}`}
+                ref={virtualizer.measureElement}
+                data-index={virtualItem.index}
+              >
+                <div className="message-avatar">{msg.role === 'user' ? '👤' : '🤖'}</div>
+                <div className="message-content">
+                  {hasMatch
+                    ? highlightText(msg.content, query)
+                    : <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{msg.content}</ReactMarkdown>
+                  }
+                </div>
               </div>
-            </div>
-          )
-        })}
+            )
+          })}
+        </div>
       </div>
     </div>
   )
