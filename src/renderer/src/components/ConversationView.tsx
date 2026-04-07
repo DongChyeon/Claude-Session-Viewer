@@ -11,19 +11,48 @@ interface Props {
   messages: Message[]
 }
 
-function highlightText(text: string, query: string): React.ReactNode {
-  if (!query.trim()) return text
-  const lower = text.toLowerCase()
-  const lowerQuery = query.toLowerCase()
-  const idx = lower.indexOf(lowerQuery)
-  if (idx === -1) return text
-  return (
-    <>
-      {text.slice(0, idx)}
-      <mark className="search-highlight">{text.slice(idx, idx + query.length)}</mark>
-      {highlightText(text.slice(idx + query.length), query)}
-    </>
-  )
+// rehype 플러그인: 마크다운 렌더링 후 HTML AST에서 검색어 하이라이트
+function makeHighlightPlugin(query: string) {
+  const trimmed = query.trim()
+  const lq = trimmed.toLowerCase()
+
+  function splitTextNode(value: string): any[] {
+    const result: any[] = []
+    let last = 0
+    let idx: number
+    const lower = value.toLowerCase()
+    while ((idx = lower.indexOf(lq, last)) !== -1) {
+      if (idx > last) result.push({ type: 'text', value: value.slice(last, idx) })
+      result.push({
+        type: 'element', tagName: 'mark',
+        properties: { className: ['search-highlight'] },
+        // lq.length 사용: Unicode 케이스폴딩 시 query.length와 다를 수 있음
+        children: [{ type: 'text', value: value.slice(idx, idx + lq.length) }],
+      })
+      last = idx + lq.length
+    }
+    if (last < value.length) result.push({ type: 'text', value: value.slice(last) })
+    return result
+  }
+
+  function visit(node: any) {
+    if (!node.children) return
+    // <pre> 블록(코드 블록)은 건너뜀: rehype-highlight가 이미 span으로 분해한 상태라
+    // mark를 삽입하면 syntax highlighting이 깨짐
+    if (node.type === 'element' && node.tagName === 'pre') return
+    const next: any[] = []
+    for (const child of node.children) {
+      if (child.type === 'text' && child.value.toLowerCase().includes(lq)) {
+        next.push(...splitTextNode(child.value))
+      } else {
+        visit(child)
+        next.push(child)
+      }
+    }
+    node.children = next
+  }
+
+  return () => (tree: any) => visit(tree)
 }
 
 export function ConversationView({ messages }: Props) {
@@ -63,6 +92,13 @@ export function ConversationView({ messages }: Props) {
       alert('HTML 내보내기에 실패했습니다.')
     }
   }
+
+  const rehypePlugins = useMemo(
+    () => query.trim()
+      ? [rehypeHighlight, makeHighlightPlugin(query)] as any
+      : [rehypeHighlight],
+    [query]
+  )
 
   const virtualizer = useVirtualizer({
     count: messages.length,
@@ -115,7 +151,6 @@ export function ConversationView({ messages }: Props) {
           {virtualizer.getVirtualItems().map((virtualItem) => {
             const msg = messages[virtualItem.index]
             const isFocused = matchedIndices[matchIndex] === virtualItem.index
-            const hasMatch = query && msg.content.toLowerCase().includes(query.toLowerCase())
             return (
               <div
                 key={msg.uuid}
@@ -132,10 +167,7 @@ export function ConversationView({ messages }: Props) {
               >
                 <div className="message-avatar">{msg.role === 'user' ? '👤' : '🤖'}</div>
                 <div className="message-content">
-                  {hasMatch
-                    ? highlightText(msg.content, query)
-                    : <ReactMarkdown rehypePlugins={[rehypeHighlight]}>{msg.content}</ReactMarkdown>
-                  }
+                  <ReactMarkdown rehypePlugins={rehypePlugins}>{msg.content}</ReactMarkdown>
                 </div>
               </div>
             )
