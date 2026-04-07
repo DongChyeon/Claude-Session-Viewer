@@ -19,6 +19,7 @@ beforeEach(() => {
     getSessions: vi.fn(),
     getMessages: vi.fn(),
     globalSearch: vi.fn().mockResolvedValue(검색결과),
+    exportHtml: vi.fn().mockResolvedValue(true),
     onSessionUpdated: vi.fn().mockReturnValue(() => {}),
   }
 })
