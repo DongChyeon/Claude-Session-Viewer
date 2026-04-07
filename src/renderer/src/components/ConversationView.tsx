@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import type { Message } from '../types'
 import { searchInSession } from '../lib/search'
 import { generateHtml } from '../lib/exportHtml'
@@ -32,11 +32,11 @@ export function ConversationView({ messages }: Props) {
   const searchInputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
-  const matchedIndices = searchInSession(messages, query)
+  const matchedIndices = useMemo(() => searchInSession(messages, query), [messages, query])
   const totalMatches = matchedIndices.length
   const currentMatch = totalMatches > 0 ? matchIndex + 1 : 0
 
-  useEffect(() => { setMatchIndex(0) }, [query])
+  useEffect(() => { setMatchIndex(0) }, [query, messages])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -70,6 +70,15 @@ export function ConversationView({ messages }: Props) {
     estimateSize: () => 120,
     overscan: 20,
   })
+
+  // 현재 매치 위치로 스크롤
+  useEffect(() => {
+    if (totalMatches === 0) return
+    const targetIndex = matchedIndices[matchIndex]
+    if (targetIndex !== undefined) {
+      virtualizer.scrollToIndex(targetIndex, { align: 'center' })
+    }
+  }, [matchIndex, matchedIndices, totalMatches, virtualizer])
 
   if (messages.length === 0) {
     return <div className="panel conversation-view empty"><span>세션을 선택하세요</span></div>
