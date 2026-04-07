@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { readdir, readFile, writeFile } from 'fs/promises'
-import { exec } from 'child_process'
+import { spawn } from 'child_process'
 import { startWatcher } from './watcher'
 import type { Project, Session, Message, GlobalSearchResult } from '../renderer/src/types'
 
@@ -133,19 +133,54 @@ ipcMain.handle('session:exportHtml', async (_e, html: string, defaultName: strin
 })
 
 // IPC: 터미널에서 세션 재개
+// sessionId를 직접 받아 함수 내에서 cmd 조합 → 외부에서 임의 명령 주입 불가
+// UUID는 [0-9a-f-] 만 포함하므로 AppleScript/bash 컨텍스트에서 안전
 ipcMain.handle('session:resume', async (_e, sessionId: string): Promise<void> => {
-  // UUID 형식 검증 (보안)
-  if (!/^[0-9a-f-]{36}$/.test(sessionId)) return
-
-  const cmd = `claude --resume ${sessionId}`
+  // RFC 4122 UUID 형식 검증
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(sessionId)) return
 
   if (process.platform === 'darwin') {
-    exec(`osascript -e 'tell application "Terminal" to do script "${cmd}"' -e 'tell application "Terminal" to activate'`)
+    // iTerm2가 실행 중이면 새 창 (명시적 세션 참조로 race condition 방지),
+    // 없으면 Terminal.app
+    const script = [
+      'tell application "System Events" to set iTermRunning to (name of processes) contains "iTerm2"',
+      'if iTermRunning then',
+      '  tell application "iTerm2"',
+      '    activate',
+      '    set newWin to (create window with default profile)',
+      `    tell current session of newWin to write text "claude --resume ${sessionId}"`,
+      '  end tell',
+      'else',
+      `  tell application "Terminal" to do script "claude --resume ${sessionId}"`,
+      '  tell application "Terminal" to activate',
+      'end if',
+    ]
+    spawn('osascript', script.flatMap(l => ['-e', l]), { detached: true, stdio: 'ignore' }).unref()
   } else if (process.platform === 'win32') {
-    exec(`start cmd /k "${cmd}"`)
+    // Windows Terminal(wt) 우선 시도, 없으면 cmd.exe
+    const cmd = `claude --resume ${sessionId}`
+    const wt = spawn('wt.exe', ['new-tab', '--', 'cmd', '/k', cmd], { detached: true, stdio: 'ignore' })
+    wt.on('error', () => {
+      spawn('cmd.exe', ['/c', 'start', 'cmd', '/k', cmd], { detached: true, stdio: 'ignore' }).unref()
+    })
+    wt.unref()
   } else {
-    // Linux: 일반적인 터미널 에뮬레이터 시도
-    exec(`x-terminal-emulator -e bash -c "${cmd}; exec bash" || gnome-terminal -- bash -c "${cmd}; exec bash" || xterm -e bash -c "${cmd}; exec bash"`)
+    // Linux: 여러 터미널 에뮬레이터를 순서대로 시도
+    const cmd = `claude --resume ${sessionId}`
+    const terminals: [string, string[]][] = [
+      ['gnome-terminal', ['--', 'bash', '-c', `${cmd}; exec bash`]],
+      ['konsole', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
+      ['x-terminal-emulator', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
+      ['xterm', ['-e', 'bash', '-c', `${cmd}; exec bash`]],
+    ]
+    const tryNext = (i: number) => {
+      if (i >= terminals.length) return
+      const [prog, args] = terminals[i]
+      spawn(prog, args, { detached: true, stdio: 'ignore' })
+        .on('error', () => tryNext(i + 1))
+        .unref()
+    }
+    tryNext(0)
   }
 })
 
