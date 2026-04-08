@@ -173,6 +173,39 @@ export function ConversationView({ messages, sessionId }: Props) {
 
   return (
     <div className="panel conversation-view">
+      {/* 대화 헤더: 제목 + 액션 버튼 */}
+      <div className="conversation-header">
+        <span className="conversation-title">{extractTitle(messages)}</span>
+        <div className="header-actions">
+          <button className="export-btn" onClick={handleExport} title="HTML로 내보내기">↓ HTML</button>
+          {sessionId && (
+            <>
+              <span className="terminal-label">터미널:</span>
+              <select
+                className="terminal-select"
+                value={terminal}
+                onChange={(e) => handleTerminalChange(e.target.value)}
+                title="터미널 선택"
+              >
+                {terminalOptions.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <button
+                className="resume-btn"
+                onClick={async () => {
+                  const err = await window.api.resumeSession(sessionId, terminal)
+                  if (err) alert(`세션 재개 실패\n\n${err}`)
+                }}
+                title={`claude --resume ${sessionId}`}
+              >
+                ▶ 재개
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* 세션 내 검색 바 */}
       <div className="in-session-search">
         <span className="search-icon">🔎</span>
@@ -193,31 +226,6 @@ export function ConversationView({ messages, sessionId }: Props) {
         <button onClick={goPrev} disabled={totalMatches === 0}>↑</button>
         <button onClick={goNext} disabled={totalMatches === 0}>↓</button>
         {query && <button onClick={() => setQuery('')}>✕</button>}
-        <button className="export-btn" onClick={handleExport} title="HTML로 내보내기">↓ HTML</button>
-        {sessionId && (
-          <>
-            <select
-              className="terminal-select"
-              value={terminal}
-              onChange={(e) => handleTerminalChange(e.target.value)}
-              title="터미널 선택"
-            >
-              {terminalOptions.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-            <button
-              className="resume-btn"
-              onClick={async () => {
-                const err = await window.api.resumeSession(sessionId, terminal)
-                if (err) alert(`세션 재개 실패\n\n${err}`)
-              }}
-              title={`claude --resume ${sessionId}`}
-            >
-              ▶ 재개
-            </button>
-          </>
-        )}
       </div>
 
       {/* 메시지 목록 */}

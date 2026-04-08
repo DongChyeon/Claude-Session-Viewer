@@ -14,7 +14,7 @@ const 메시지들: Message[] = [
 describe('ConversationView', () => {
   test('메시지 목록을 렌더링한다', () => {
     render(<ConversationView messages={메시지들} />)
-    expect(screen.getByText('Kotlin 리팩토링 해줘')).toBeInTheDocument()
+    expect(screen.getAllByText('Kotlin 리팩토링 해줘').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('네, kotlin 파일을 읽어볼게요')).toBeInTheDocument()
   })
 
