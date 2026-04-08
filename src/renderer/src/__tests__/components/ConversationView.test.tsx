@@ -61,6 +61,44 @@ describe('ConversationView', () => {
     render(<ConversationView messages={[]} />)
     expect(screen.getByText('세션을 선택하세요')).toBeInTheDocument()
   })
+
+  test('세션이 선택되면 첫 유저 메시지 기반 제목을 헤더에 표시한다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    expect(document.querySelector('.conversation-header')).toBeInTheDocument()
+    expect(document.querySelector('.conversation-title')).toBeInTheDocument()
+  })
+
+  test('헤더에 HTML 내보내기 버튼이 있다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    expect(document.querySelector('.conversation-header .export-btn')).toBeInTheDocument()
+  })
+
+  test('헤더에 터미널 레이블이 있다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    expect(screen.getByText('터미널:')).toBeInTheDocument()
+  })
+
+  test('헤더에 재개 버튼이 있다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    expect(document.querySelector('.conversation-header .resume-btn')).toBeInTheDocument()
+  })
+
+  test('검색 바에 HTML 내보내기 버튼이 없다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    const searchBar = document.querySelector('.in-session-search')
+    expect(searchBar?.querySelector('.export-btn')).toBeNull()
+  })
+
+  test('검색 바에 터미널 셀렉트가 없다', () => {
+    render(<ConversationView messages={메시지들} sessionId="test-session" />)
+    const searchBar = document.querySelector('.in-session-search')
+    expect(searchBar?.querySelector('.terminal-select')).toBeNull()
+  })
+
+  test('메시지가 없으면 conversation-header를 렌더링하지 않는다', () => {
+    render(<ConversationView messages={[]} />)
+    expect(document.querySelector('.conversation-header')).toBeNull()
+  })
 })
 
 describe('extractTitle', () => {
