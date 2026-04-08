@@ -2,6 +2,7 @@ import { describe, test, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ConversationView } from '../../components/ConversationView'
+import { extractTitle } from '../../components/ConversationView'
 import type { Message } from '../../types'
 
 const 메시지들: Message[] = [
@@ -59,5 +60,48 @@ describe('ConversationView', () => {
   test('메시지가 없으면 빈 상태를 표시한다', () => {
     render(<ConversationView messages={[]} />)
     expect(screen.getByText('세션을 선택하세요')).toBeInTheDocument()
+  })
+})
+
+describe('extractTitle', () => {
+  test('첫 번째 유저 메시지의 첫 줄을 제목으로 반환한다', () => {
+    const msgs: Message[] = [
+      { uuid: 'u1', role: 'user', content: '첫 줄입니다\n두 번째 줄', timestamp: '2026-04-08T00:00:00.000Z' },
+    ]
+    expect(extractTitle(msgs)).toBe('첫 줄입니다')
+  })
+
+  test('첫 번째 유저 메시지의 첫 문장을 제목으로 반환한다', () => {
+    const msgs: Message[] = [
+      { uuid: 'u1', role: 'user', content: '리팩토링 해줘. 나머지 내용', timestamp: '2026-04-08T00:00:00.000Z' },
+    ]
+    expect(extractTitle(msgs)).toBe('리팩토링 해줘')
+  })
+
+  test('첫 줄이 첫 문장보다 짧으면 첫 줄을 반환한다', () => {
+    const msgs: Message[] = [
+      { uuid: 'u1', role: 'user', content: '짧은 줄\n긴 문장입니다. 계속됩니다', timestamp: '2026-04-08T00:00:00.000Z' },
+    ]
+    expect(extractTitle(msgs)).toBe('짧은 줄')
+  })
+
+  test('60자를 초과하면 잘라낸다', () => {
+    const long = 'a'.repeat(80)
+    const msgs: Message[] = [
+      { uuid: 'u1', role: 'user', content: long, timestamp: '2026-04-08T00:00:00.000Z' },
+    ]
+    expect(extractTitle(msgs)).toHaveLength(60)
+  })
+
+  test('첫 번째 어시스턴트 메시지만 있으면 타임스탬프 폴백을 반환한다', () => {
+    const msgs: Message[] = [
+      { uuid: 'u1', role: 'assistant', content: '안녕하세요', timestamp: '2026-04-08T00:00:00.000Z' },
+    ]
+    const result = extractTitle(msgs)
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  test('빈 메시지 배열이면 빈 문자열을 반환한다', () => {
+    expect(extractTitle([])).toBe('')
   })
 })
