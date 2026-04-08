@@ -12,6 +12,15 @@ interface Props {
   sessionId?: string
 }
 
+export function extractTitle(messages: Message[]): string {
+  const first = messages.find(m => m.role === 'user')?.content ?? ''
+  if (!first) return messages[0] ? new Date(messages[0].timestamp).toLocaleString() : ''
+  const line = first.split('\n')[0]
+  const sentence = first.split(/[.?!。]/)[0]
+  const raw = line.length <= sentence.length ? line : sentence
+  return raw.trim().slice(0, 60) || new Date(messages[0].timestamp).toLocaleString()
+}
+
 // rehype 플러그인: 마크다운 렌더링 후 HTML AST에서 검색어 하이라이트
 function makeHighlightPlugin(query: string) {
   const trimmed = query.trim()
